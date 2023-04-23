@@ -8,3 +8,11 @@ my toy language experiment.
 
 This tool is highly specific to solving a bug I'm currently
 working through.
+
+Doing it:
+
+    zig build-exe mez.zig
+    ./mez.zig
+
+It assumes you've got a file to examine called `foo` in
+the same directory.
