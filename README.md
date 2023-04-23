@@ -12,7 +12,7 @@ working through.
 Doing it:
 
     zig build-exe mez.zig
-    ./mez.zig
+    ./mez
 
 It assumes you've got a file to examine called `foo` in
 the same directory.
