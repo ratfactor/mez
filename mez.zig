@@ -38,10 +38,10 @@ pub fn main() !void {
     //      50-51 Index in section header table with section names
 
     std.debug.print("ELF HEADER\n", .{});
-    std.debug.print("  e_ident - ei_mag0-3 (4 bytes of magic number): ", .{});
+    std.debug.print("  4 bytes of magic: ", .{});
 
-    const ei_mag = "\x7fELF";
-    for (ei_mag, buffer[0..4]) |should, is| {
+    const magic = "\x7fELF";
+    for (magic, buffer[0..4]) |should, is| {
         if (should == is) {
             std.debug.print("{x}", .{is});
         } else {
@@ -51,12 +51,40 @@ pub fn main() !void {
     }
     std.debug.print(" GOOD!\n", .{});
 
-    // NEXT: byte 5 is 1: 32bit or 2: 64bit
+    // 32 bit?
+    if (buffer[4] == 1){
+        std.debug.print("  32-bit, as expected.\n", .{});
+    } else {
+        std.debug.print("\nOH NO! Got {x} instead of 1 for 32-bits.\n", .{buffer[4]});
+        std.os.exit(1);
+    }
 
-    std.debug.print("program entry addr: 0x{x:0>2}{x:0>2}{x:0>2}{x:0>2}\n", .{
+    // little endian?
+    if (buffer[5] == 1){
+        std.debug.print("  little-endian, as expected.\n", .{});
+    } else {
+        std.debug.print("\nOH NO! Got {x} instead of 1 for endianness.\n", .{buffer[5]});
+        std.os.exit(1);
+    }
+
+    std.debug.print("Program entry addr: 0x{x:0>2}{x:0>2}{x:0>2}{x:0>2}\n", .{
         buffer[27],
         buffer[26],
         buffer[25],
         buffer[24],
+    });
+
+    std.debug.print("Program header offset (in this file): 0x{x:0>2}{x:0>2}{x:0>2}{x:0>2}\n", .{
+        buffer[34],
+        buffer[33],
+        buffer[32],
+        buffer[31],
+    });
+
+    std.debug.print("Section header offset (in this file): 0x{x:0>2}{x:0>2}{x:0>2}{x:0>2}\n", .{
+        buffer[35],
+        buffer[36],
+        buffer[37],
+        buffer[38],
     });
 }
