@@ -52,72 +52,73 @@ pub fn main() !void {
     std.debug.print(" GOOD!\n", .{});
 
     // 32 bit?
-    if (buffer[4] == 1){
-        std.debug.print("  4 - 32-bit, as expected.\n", .{});
+    if (buffer[4] == 1) {
+        std.debug.print("    4 - 32-bit, as expected.\n", .{});
     } else {
         std.debug.print("\nOH NO! Got {x} instead of 1 for 32-bits.\n", .{buffer[4]});
         std.os.exit(1);
     }
 
     // little endian?
-    if (buffer[5] == 1){
-        std.debug.print("  5 - little-endian, as expected.\n", .{});
+    if (buffer[5] == 1) {
+        std.debug.print("    5 - little-endian, as expected.\n", .{});
     } else {
         std.debug.print("\nOH NO! Got {x} instead of 1 for endianness.\n", .{buffer[5]});
         std.os.exit(1);
     }
 
-    std.debug.print("24-27 - Program entry addr: 0x{x:0>2}{x:0>2}{x:0>2}{x:0>2}\n", .{
-        buffer[27],
-        buffer[26],
-        buffer[25],
-        buffer[24],
-    });
+    const entry_addr = cast(u32, buffer[24..27]);
+    std.debug.print("24-27 - Program entry addr: 0x{x:0>8}\n", .{entry_addr});
 
-    std.debug.print("28-31 - Program header offset (in this file): 0x{x:0>2}{x:0>2}{x:0>2}{x:0>2}\n", .{
-        buffer[31],
-        buffer[30],
-        buffer[29],
-        buffer[28],
-    });
+    const ph_offset = cast(u32, buffer[28..31]);
+    std.debug.print("28-31 - Program header offset (in this file): 0x{x}\n", .{ph_offset});
 
-    std.debug.print("32-35 - Section header offset (in this file): 0x{x:0>2}{x:0>2}{x:0>2}{x:0>2}\n", .{
-        buffer[35],
-        buffer[34],
-        buffer[33],
-        buffer[32],
-    });
+    std.debug.print("32-35 - Section header offset (in this file): 0x{x}\n", .{cast(u32, buffer[32..35])});
+
+    //      40-41 Header size
+    std.debug.print("40-41 - Size of this header: {d} bytes\n", .{cast(u16, buffer[40..41])});
+
 
     //      42-43 Size of an entry in the program header table
-    std.debug.print("42-43 - Size of program header entries.: {d:0>2}{d:0>2} bytes\n", .{
-        buffer[43],
-        buffer[42],
-    });
+    const ph_size = cast(u16, buffer[42..43]);
+    std.debug.print("42-43 - Size of program header entries: {d} bytes\n", .{ph_size});
 
     //      44-45 Number of entries in the program header table
-    std.debug.print("44-45 - Number of program entries: {d:0>2}{d:0>2}\n", .{
-        buffer[45],
-        buffer[44],
-    });
+    const ph_count = cast(u16, buffer[44..45]);
+    std.debug.print("44-45 - Number of program entries: {d}\n", .{ph_count});
 
-	/*
-	program headers
-	 0-3 	Type of segment (see below)
-			0 = null - ignore the entry
-			1 = load - clear p_memsz bytes at p_vaddr to 0
-					   then copy p_filesz bytes
-					   from p_offset to p_vaddr
-			2 = dynamic - requires dynamic linking
-			3 = interp - file path to interpreter
-			4 = note section
-	4-7 	offset in the file, data for this segment (p_offset)
-	8-11 	start to put this segment in virtual memory (p_vaddr)
-	12-15 	Undefined for the System V ABI
-	16-19 	Size of the segment in the file (p_filesz)
-	20-23 	Size of the segment in memory (p_memsz)
-	24-27 	Flags (see below)
-	        1 = executable, 2 = writable, 4 = readable. 
-	28-31 	The alignment for this section (must be a power of 2) 
-	*/
 
+    // Point to the first header offset
+    var ph_pos = ph_offset;
+
+
+    for(0..ph_count) |_|{
+        std.debug.print("------------------------\n", .{});
+        std.debug.print("Program Header @ 0x{x}\n", .{ph_pos});
+        ph_pos += ph_size;
+    }
+
+
+    //	program headers
+    //	 0-3 	Type of segment (see below)
+    //			0 = null - ignore the entry
+    //			1 = load - clear p_memsz bytes at p_vaddr to 0
+    //					   then copy p_filesz bytes
+    //					   from p_offset to p_vaddr
+    //			2 = dynamic - requires dynamic linking
+    //			3 = interp - file path to interpreter
+    //			4 = note section
+    //	4-7 	offset in the file, data for this segment (p_offset)
+    //	8-11 	start to put this segment in virtual memory (p_vaddr)
+    //	12-15 	Undefined for the System V ABI
+    //	16-19 	Size of the segment in the file (p_filesz)
+    //	20-23 	Size of the segment in memory (p_memsz)
+    //	24-27 	Flags (see below)
+    //	        1 = executable, 2 = writable, 4 = readable.
+    //	28-31 	The alignment for this section (must be a power of 2)
+
+}
+
+fn cast(T: anytype, bytes: []u8) T {
+    return @ptrCast(*align(1) const T, bytes).*;
 }
