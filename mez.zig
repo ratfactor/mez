@@ -67,36 +67,25 @@ pub fn main() !void {
         std.os.exit(1);
     }
 
-    const entry_addr = cast(u32, buffer[24..27]);
+    const entry_addr = cast(u32, buffer[24..28]);
     std.debug.print("24-27 - Program entry addr: 0x{x:0>8}\n", .{entry_addr});
 
-    const ph_offset = cast(u32, buffer[28..31]);
+    const ph_offset = cast(u32, buffer[28..32]);
     std.debug.print("28-31 - Program header offset (in this file): 0x{x}\n", .{ph_offset});
 
-    std.debug.print("32-35 - Section header offset (in this file): 0x{x}\n", .{cast(u32, buffer[32..35])});
+    std.debug.print("32-35 - Section header offset (in this file): 0x{x}\n", .{cast(u32, buffer[32..36])});
 
     //      40-41 Header size
-    std.debug.print("40-41 - Size of this header: {d} bytes\n", .{cast(u16, buffer[40..41])});
+    std.debug.print("40-41 - Size of this header: {d} bytes\n", .{cast(u16, buffer[40..42])});
 
 
     //      42-43 Size of an entry in the program header table
-    const ph_size = cast(u16, buffer[42..43]);
+    const ph_size = cast(u16, buffer[42..44]);
     std.debug.print("42-43 - Size of program header entries: {d} bytes\n", .{ph_size});
 
     //      44-45 Number of entries in the program header table
-    const ph_count = cast(u16, buffer[44..45]);
+    const ph_count = cast(u16, buffer[44..46]);
     std.debug.print("44-45 - Number of program entries: {d}\n", .{ph_count});
-
-
-    // Point to the first header offset
-    var ph_pos = ph_offset;
-
-
-    for(0..ph_count) |_|{
-        std.debug.print("------------------------\n", .{});
-        std.debug.print("Program Header @ 0x{x}\n", .{ph_pos});
-        ph_pos += ph_size;
-    }
 
 
     //	program headers
@@ -108,17 +97,78 @@ pub fn main() !void {
     //			2 = dynamic - requires dynamic linking
     //			3 = interp - file path to interpreter
     //			4 = note section
-    //	4-7 	offset in the file, data for this segment (p_offset)
-    //	8-11 	start to put this segment in virtual memory (p_vaddr)
+    //	4-7 	offset in file, data for this segment (p_offset)
+    //	8-11 	start to put this segment in virtual mem (p_vaddr)
     //	12-15 	Undefined for the System V ABI
     //	16-19 	Size of the segment in the file (p_filesz)
     //	20-23 	Size of the segment in memory (p_memsz)
     //	24-27 	Flags (see below)
     //	        1 = executable, 2 = writable, 4 = readable.
-    //	28-31 	The alignment for this section (must be a power of 2)
+    //	28-31 	The alignment for this section (must be power of 2)
+
+    // Point to the first header offset
+    var ph_pos = ph_offset;
+
+
+    for(0..ph_count) |_|{
+        std.debug.print("------------------------\n", .{});
+        std.debug.print("Program Header @ 0x{x}\n", .{ph_pos});
+
+        //	 0-3 	Type of segment
+        const ph_type = cast(u32, buffer[ph_pos..ph_pos+4]);
+
+        if (ph_type == 1)  {
+            std.debug.print("  Segment type: {d} (LOAD, as expected)\n", .{ph_type});
+        }
+    else{
+            std.debug.print("\nERROR: Expected segment type 1 (LOAD), got {d} instead.\n", .{ph_type});
+            printMem(buffer, ph_pos);
+            std.os.exit(1);
+        }
+
+        //	4-7 	offset in file
+        const seg_foffset = cast(u32, buffer[ph_pos+4..ph_pos+8]);
+        std.debug.print("  File offset: 0x{x}\n", .{seg_foffset});
+
+        //	16-19 	Size of the segment in the file (p_filesz)
+        const seg_fsize = cast(u32, buffer[ph_pos+16..ph_pos+20]);
+        std.debug.print("  File size: {d} bytes\n", .{seg_fsize});
+
+        //	8-11 	start to put this segment in virtual mem (p_vaddr)
+        const seg_moffset = cast(u32, buffer[ph_pos+8..ph_pos+12]);
+        std.debug.print("  Target memory start: 0x{x}\n", .{seg_moffset});
+
+        //	20-23 	Size of the segment in memory (p_memsz)
+        const seg_msize = cast(u32, buffer[ph_pos+20..ph_pos+24]);
+        std.debug.print("  Target memory size: {d} bytes\n", .{seg_msize});
+
+        
+
+        // Move to next header
+        ph_pos += ph_size;
+    }
+
 
 }
 
+fn printMem(mem: []u8, pos: usize) void {
+    const start=std.math.max(0, pos-4);
+    const end=std.math.min(mem.len, pos+4);
+    for(mem[start..end], start..end)|m,c|{
+        if(c==pos){
+            std.debug.print("{x}: {x} <--- pos\n", .{c, m});
+        }
+        else{
+            std.debug.print("{x}: {x}\n", .{c, m});
+        }
+    }
+}
+
 fn cast(T: anytype, bytes: []u8) T {
+    if(@sizeOf(T) != bytes.len){
+            std.debug.print("Mismatch for cast: type is {d} bytes but slice is {d}.\n", .{ @sizeOf(T), bytes.len });
+            std.os.exit(1);
+    }
+    
     return @ptrCast(*align(1) const T, bytes).*;
 }
