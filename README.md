@@ -1,5 +1,8 @@
 # MEZ = Meow5 + ELF + Zig
 
+**MOVED!** Hello, I am moving my repos to http://ratfactor.com/repos/
+and setting them to read-only ("archived") on GitHub. Thank you, _-Dave_
+
 This is a one-off utility (at least so far) written in Zig
 to help me debug the 32-bit ELF executables I'm exporting
 from
